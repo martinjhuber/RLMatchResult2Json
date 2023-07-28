@@ -151,8 +151,8 @@ JSON RLMatchResult2Json::getPlayersInfo(int playerTeamNum, ArrayWrapper<PriWrapp
 		playerInfo["assists"] = player.GetMatchAssists();
 		playerInfo["saves"] = player.GetMatchSaves();
 		playerInfo["shots"] = player.GetMatchShots();
-		playerInfo["damage"] = player.GetMatchBreakoutDamage();
-		playerInfo["demolishes"] = player.GetMatchDemolishes();
+		//playerInfo["damage"] = player.GetMatchBreakoutDamage();
+		//playerInfo["demolishes"] = player.GetMatchDemolishes();
 		playerInfo["isMvp"] = player.GetbMatchMVP();
 		playerInfo["mmr"] = getPlayerMMR(player);
 
