@@ -17,7 +17,8 @@ class RLMatchResult2Json: public BakkesMod::Plugin::BakkesModPlugin
 private:
 	void createDirectory(std::string path);
 	JSON getMatchResult();
-	std::string writeJson(JSON obj);
+	std::string createOutputFileName(JSON obj);
+	void writeJson(std::string fileName, JSON obj);
 	std::string getCurrentUtcDate();
 	JSON getTeamInfo(TeamWrapper team);
 	JSON getPlayersInfo(int playerTeamNum, ArrayWrapper<PriWrapper> players);

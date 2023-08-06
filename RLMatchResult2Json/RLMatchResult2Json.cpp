@@ -38,7 +38,8 @@ void RLMatchResult2Json::onUnload() {
 void RLMatchResult2Json::onMatchEnd(std::string eventName) {
 	LOG("Match has ended.");
 	JSON matchResult = getMatchResult();
-	std::string fileName = writeJson(matchResult);
+	std::string fileName = createOutputFileName(matchResult);
+	writeJson(fileName, matchResult);
 
 	std::stringstream message;
 	message << "Your match results were successfully stored to " << fileName << ".";
@@ -91,20 +92,19 @@ JSON RLMatchResult2Json::getMatchResult() {
 
 	result["teams"] = giri::json::Array(getTeamInfo(teams.Get(playerTeamNum)), getTeamInfo(teams.Get(otherTeamNum)));
 
-	bool isWin = false;
-	if (result["teams"][0]["hasForfeit"].ToInt() != 0) {
+	int winnerTeamNum = server.GetGameWinner().GetTeamNum();
+	bool isForfeit = (result["teams"][0]["hasForfeit"].ToInt() != 0 || result["teams"][1]["hasForfeit"].ToInt() != 0);
+
+	bool isWin = (winnerTeamNum == playerTeamNum);
+
+	if (isForfeit) {
+		result["teams"][winnerTeamNum]["hasForfeit"] = 0;
 		result["match"]["isForfeit"] = 1;
-		result["match"]["forfeitTeamsIndex"] = 0;
-	}
-	else if (result["teams"][1]["hasForfeit"].ToInt() != 0) {
-		result["match"]["isForfeit"] = 1;
-		result["match"]["forfeitTeamsIndex"] = 1;
-		isWin = true;
-	}
-	else {
+		result["match"]["forfeitTeamsIndex"] = 1 - winnerTeamNum;
+	} else {
 		result["match"]["isForfeit"] = 0;
-		isWin = result["teams"][0]["score"].ToInt() > result["teams"][1]["score"].ToInt();
 	}
+
 	result["match"]["result"] = isWin ? "WIN" : "LOSS";
 
 	result["players"] = getPlayersInfo(playerTeamNum, server.GetPRIs());
@@ -115,11 +115,13 @@ JSON RLMatchResult2Json::getMatchResult() {
 
 JSON RLMatchResult2Json::getTeamInfo(TeamWrapper team) {
 	auto teamInfo = giri::json::Object();
+	TeamGameEventWrapper tgew = team.GetGameEvent();
+
 	teamInfo["teamNum"] = team.GetTeamNum();
 	teamInfo["teamName"] = team.GetSanitizedTeamName().ToString();
 
 	teamInfo["score"] = team.GetScore();
-	teamInfo["hasForfeit"] = team.GetbForfeit();
+	teamInfo["hasForfeit"] = tgew.GetbForfeit();
 
 	auto primaryColor = team.GetPrimaryColor();
 	auto secondaryColor = team.GetSecondaryColor();
@@ -169,12 +171,19 @@ float RLMatchResult2Json::getPlayerMMR(PriWrapper player) {
 	return mmr.GetPlayerMMR(uniqueIDWrapper, playlist);
 }
 
-std::string RLMatchResult2Json::writeJson(JSON obj) {
-	std::string baseFolder = cvarManager->getCvar("rlmr2json_save_path").getStringValue();
+std::string RLMatchResult2Json::createOutputFileName(JSON obj) {
+	const auto now = std::chrono::system_clock::now();
 	std::stringstream fileName;
-	fileName << std::time(nullptr) << ".json";
+	fileName << std::format("{:%Y%m%d-%H%M}", now) << "_" 
+		<< obj["match"]["result"].ToString() << "_"
+		<< obj["teams"][0]["score"] << "-" << obj["teams"][1]["score"]
+		<< ".json";
+	return fileName.str();
+}
 
-	auto fullPath = gameWrapper->GetDataFolder() / baseFolder / fileName.str();
+void RLMatchResult2Json::writeJson(std::string fileName, JSON obj) {
+	std::string baseFolder = cvarManager->getCvar("rlmr2json_save_path").getStringValue();
+	auto fullPath = gameWrapper->GetDataFolder() / baseFolder / fileName;
 
 	std::ofstream fh;
 	fh.open(fullPath);
@@ -182,8 +191,4 @@ std::string RLMatchResult2Json::writeJson(JSON obj) {
 	fh.close();
 
 	LOG("Match results JSON stored to {}", fullPath.string());
-
-	return fileName.str();
 }
-
-
