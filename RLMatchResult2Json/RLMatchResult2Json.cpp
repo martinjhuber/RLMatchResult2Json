@@ -177,6 +177,8 @@ std::string RLMatchResult2Json::createOutputFileName(JSON obj) {
 	fileName << std::format("{:%Y%m%d-%H%M}", now) << "_" 
 		<< obj["match"]["result"].ToString() << "_"
 		<< obj["teams"][0]["score"] << "-" << obj["teams"][1]["score"]
+		<< (obj["match"]["isOvertime"].ToInt() == 1 ? "_OT" : "")
+		<< (obj["match"]["isForfeit"].ToInt() == 1 ? "_FF" : "")
 		<< ".json";
 	return fileName.str();
 }
